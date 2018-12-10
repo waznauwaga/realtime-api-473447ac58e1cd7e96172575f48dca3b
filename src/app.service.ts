@@ -3,7 +3,9 @@ import * as rdb from 'rethinkdb';
 import { Observable, Subject } from 'rxjs';
 var request = require('ajax-request');
 import * as _ from 'lodash';
-import * as moment from 'moment'
+import * as moment from 'moment';
+var conexiondb:any =process.env.conexionrethinkdb;
+var ipstack:any = process.env.ipstack;
 @Injectable()
 export class AppService {
 
@@ -179,7 +181,7 @@ export class AppService {
 
   tableSuscribe(): Observable<any> {
     const subject = new Subject<any>();
-    rdb.connect({ host: '31.220.60.179', port: 28015, user: 'admin', password: 'konfortowego_1' }, (err, conn) => {
+    rdb.connect({ host: conexiondb.host, port: conexiondb.port, user: conexiondb.user, password: conexiondb.password }, (err, conn) => {
       rdb.db('logs').table('administracion_log').changes().run(conn, (err, result) => {
 
         subject.next(result);
@@ -196,7 +198,7 @@ export class AppService {
   async getIpAddress() {
     return new Promise((resolve, reject) => {
 
-      request({ url: 'http://api.ipstack.com/check?access_key=fe66524f27f3d0f6555c83a2d31de1b5&output=json', method: 'GET' }, (err, res, body) => {
+      request({ url: ipstack, method: 'GET' }, (err, res, body) => {
         let dataParse = JSON.parse(body);
         resolve(dataParse);
       })
@@ -212,10 +214,10 @@ export class AppService {
       if (conn != null) {
         try {
 
-         /* console.log({
-            network: log.user.deviceState.netWork, battery: log.user.deviceState.batteryStatus,
-            user_data: log.user
-          });*/
+          /* console.log({
+             network: log.user.deviceState.netWork, battery: log.user.deviceState.batteryStatus,
+             user_data: log.user
+           });*/
           //console.log({ objet_key_log: Object.keys(log.user) });
           rdb.db('logs').table('smartphone_state_log').getAll(log.user.email, { index: "email" }).run(conn, async (err, result) => {
             let resultArr = await result.toArray();
@@ -224,10 +226,10 @@ export class AppService {
               let idxUser = _.findIndex(resultArr, (o) => {
                 return o.email === log.user.email;
               })
-             // console.log({ idxUser: idxUser });
+              // console.log({ idxUser: idxUser });
               if (idxUser > -1) {
                 rdb.db('logs').table('smartphone_state_log').filter({ email: log.user.email }).update({ email: log.user.email, deviceState: log.user.deviceState, seccionTime: log.seccionTime }).run(conn, async (err, result) => {
-                 // console.log({ document_update: result });
+                  // console.log({ document_update: result });
                   resolve(true);
                 })
               } else {
@@ -240,7 +242,7 @@ export class AppService {
             } else {
               //console.log('registrado en base de dato');
               rdb.db('logs').table('smartphone_state_log').insert({ email: log.user.email, deviceState: log.user.deviceState, seccionTime: log.seccionTime }).run(conn, async (err, result) => {
-               // console.log({ document_create: result });
+                // console.log({ document_create: result });
                 resolve(true);
               })
             }
@@ -291,13 +293,69 @@ export class AppService {
 
   }
 
+  async set_log_user(log) {
+    return new Promise(async (resolve, reject) => {
+
+      let conn: any = await this.conexion();
+      if (conn != null) {
+        try {
+
+
+          rdb.db('logs').table('smartphone_state_log_users').getAll(log.user.email, { index: "email" }).run(conn, async (err, result) => {
+
+
+            let resultArr = await result.toArray();
+
+
+
+            if (resultArr.length > 0) { 
+
+              let idxUser = _.findIndex(resultArr, (o) => {
+                return o.email === log.user.email;
+              })
+              // console.log({ idxUser: idxUser });
+              if (idxUser > -1) {
+                rdb.db('logs').table('smartphone_state_log_users').filter({ email: log.user.email }).update({ email: log.user.email, deviceState: log.user.deviceState, seccionTime: log.seccionTime }).run(conn, async (err, result) => {
+                  //console.log({ document_update: result });
+                  resolve(true);
+                })
+              } else {
+                rdb.db('logs').table('smartphone_state_log_users').insert({ email: log.user.email, deviceState: log.user.deviceState, seccionTime: log.seccionTime }).run(conn, async (err, result) => {
+                  //console.log({ document_create: result });
+                  resolve(true);
+                })
+              }
+
+              
+            }else {
+              //console.log('registrado en base de dato');
+              rdb.db('logs').table('smartphone_state_log_users').insert({ email:log.user.email, deviceState:log.user.deviceState, seccionTime: log.seccionTime }).run(conn, async (err, result) => {
+                //console.log({ document_create_else: result });
+                resolve(true);
+              })
+            }
+
+
+          })
+
+
+        } catch (e) { }
+
+      } else {
+
+      }
+
+    })
+
+  }
+
 
   async Add_incidencia(api) {
 
     return new Promise(async (resolve, reject) => {
       let conn: any = await this.conexion();
 
-      api.incidencia.time=moment().unix();
+      api.incidencia.time = moment().unix();
 
       if (conn != null) {
         try {
@@ -315,6 +373,57 @@ export class AppService {
 
   }
 
+
+  async incidencia_read_mark(api) {
+
+    return new Promise(async (resolve, reject) => {
+      let conn: any = await this.conexion();
+
+      //api.incidencia.time=moment().unix();
+
+      if (conn != null) {
+        try {
+
+          rdb.db('datas_app').table('api_incidencia_read').insert({
+            codeincidencia: api.code, emailread: api.email
+          }).run(conn, async (err, result) => {
+            resolve({ result: result, error: err });
+          })
+        } catch (e) {
+          resolve({ result: null, err: e });
+        }
+      } else {
+        resolve({ result: null, err: 'Fallo en la conexión' });
+      }
+    })
+
+  }
+
+
+  async incidencia_read_historial_user_admin(user) {
+
+    return new Promise(async (resolve, reject) => {
+      let conn: any = await this.conexion();
+
+      //api.incidencia.time=moment().unix();
+
+      if (conn != null) {
+        try {
+
+          rdb.db('datas_app').table('api_incidencia_read').getAll(user.email, { index: "emailread" }).run(conn, async (err, result) => {
+            let incidencia_markRead = result.toArray();
+            resolve({ result: incidencia_markRead, error: err });
+          })
+        } catch (e) {
+          resolve({ result: [], err: e });
+        }
+      } else {
+        resolve({ result: [], err: 'Fallo en la conexión' });
+      }
+    })
+
+  }
+
   async Incidencia_historial() {
 
     return new Promise(async (resolve, reject) => {
@@ -324,7 +433,7 @@ export class AppService {
       if (conn != null) {
         try {
 
-          rdb.db('datas_app').table('api_incidencias').filter({active:true}).run(conn, async (err, result) => {
+          rdb.db('datas_app').table('api_incidencias').filter({ active: true }).run(conn, async (err, result) => {
             let incidencias = result.toArray();
             resolve({ result: incidencias, error: err });
           })
@@ -399,7 +508,7 @@ export class AppService {
             resolve(result);
           })
 
-         } catch (e) { }
+        } catch (e) { }
       } else {
         resolve({ result: null, err: 'Fallo en la conexión' });
       }
@@ -407,93 +516,98 @@ export class AppService {
     })
   }
 
- async message_historial(user){
-  return new Promise(async (resolve, reject) => {
-    let conn: any = await this.conexion();
+  async message_historial(user) {
+    return new Promise(async (resolve, reject) => {
+      let conn: any = await this.conexion();
 
-    if (conn != null) {
-      try {
+      if (conn != null) {
+        try {
 
-        rdb.db(user.db).table(user.table).getAll(user.email,{index:"email"}).run(conn, async (err, result) => {
-          let users = await result.toArray()
+          rdb.db(user.db).table(user.table).getAll(user.email, { index: "email" }).run(conn, async (err, result) => {
+            let users = await result.toArray()
             resolve({ result: users, err: null });
-        })
+          })
 
-       } catch (e) { 
-        resolve({ result: null, err: e });
-       }
-    } else {
-      resolve({ result: null, err: 'Fallo en la conexión' });
-    }
+        } catch (e) {
+          resolve({ result: null, err: e });
+        }
+      } else {
+        resolve({ result: null, err: 'Fallo en la conexión' });
+      }
 
-  })
- }
+    })
+  }
 
- async message_mark_read(message){
-  return new Promise(async (resolve, reject) => {
-    let conn: any = await this.conexion();
-
-    if (conn != null) {
-      try {
-        rdb.db(message.db).table(message.table).get(message.id).update(message.message).run(conn, async (err, result) => {
+  async message_mark_read(message) {
+    return new Promise(async (resolve, reject) => {
+      let conn: any = await this.conexion();
+      //console.log({messageRecibe:message.message});
+      if (conn != null) {
+        try {
+          rdb.db(message.db).table(message.table).get(message.message.id).update({
+            email: message.message.email,
+            message: message.message.message, motivo: message.message.motivo, read: message.message.read,
+            remitente: message.message.remitente, remitenteData: message.message.remitenteData,
+            time: message.message.time
+          }).run(conn, async (err, result) => {
             resolve({ result: result, err: null });
-        })
+          })
 
-      }catch(e){
-        resolve({ result: null, err: e });
+        } catch (e) {
+          resolve({ result: null, err: e });
+        }
+      } else {
+        resolve({ result: null, err: 'Fallo en la conexión' });
       }
-    }else {
-      resolve({ result: null, err: 'Fallo en la conexión' });
-    }
-  })
- }
+    })
+  }
 
- async notificacion_users_add(notificacion){
-  return new Promise(async (resolve, reject) => {
-    let conn: any = await this.conexion();
+  async notificacion_users_add(notificacion) {
+    return new Promise(async (resolve, reject) => {
+      let conn: any = await this.conexion();
 
-    if (conn != null) {
-      try {
-        rdb.db(notificacion.db).table(notificacion.table).insert(notificacion.notificacion).run(conn, async (err, result) => {
-            
-          resolve({ result: result, err: null });
-        })
+      if (conn != null) {
+        try {
+          rdb.db(notificacion.db).table(notificacion.table).insert(notificacion.notificacion).run(conn, async (err, result) => {
 
-      }catch(e){
-        resolve({ result: null, err: e });
+            resolve({ result: result, err: null });
+          })
+
+        } catch (e) {
+          resolve({ result: null, err: e });
+        }
+      } else {
+        resolve({ result: null, err: 'Fallo en la conexión' });
       }
-    }else {
-      resolve({ result: null, err: 'Fallo en la conexión' });
-    }
-  })
- }
+    })
+  }
 
 
- async notificacion_users_historial(notificacion){
-  return new Promise(async (resolve, reject) => {
-    let conn: any = await this.conexion();
+  async notificacion_users_historial(notificacion) {
+    return new Promise(async (resolve, reject) => {
+      let conn: any = await this.conexion();
 
-    if (conn != null) {
-      try {
-        rdb.db(notificacion.db).table(notificacion.table).getAll(notificacion.user.email,{index:"remitente"}).run(conn, async (err, result) => {
-          let notificaciones = await result.toArray();  
-          resolve({ result: notificaciones, err: null });
-        })
+      if (conn != null) {
+        try {
+          rdb.db(notificacion.db).table(notificacion.table).getAll(notificacion.user.email, { index: "remitente" }).run(conn, async (err, result) => {
+            let notificaciones = await result.toArray();
+            resolve({ result: notificaciones, err: null });
+          })
 
-      }catch(e){
-        resolve({ result: null, err: e });
+        } catch (e) {
+          resolve({ result: null, err: e });
+        }
+      } else {
+        resolve({ result: null, err: 'Fallo en la conexión' });
       }
-    }else {
-      resolve({ result: null, err: 'Fallo en la conexión' });
-    }
-  })
- }
+    })
+  }
 
 
   async conexion() {
 
     try {
-      return await rdb.connect({ host: '31.220.60.179', port: 28015, user: 'admin', password: 'konfortowego_1' });
+      return await rdb.connect({ host: conexiondb.host, port: conexiondb.port, user: conexiondb.user, password: conexiondb.password });
     } catch (e) {
       return null;
     }

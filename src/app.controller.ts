@@ -376,6 +376,56 @@ export class AppController {
         } catch (e) { }
     }
 
+    @Post('incidencia-mark-read')
+    @HttpCode(200)
+
+    async incidenciaReadMark(@Req() req) {
+        try {
+
+            /**
+             * añade una incidencia
+             * 
+             */
+
+            let data = req.body.peticion.conf;
+            
+            let respuesta = await this._appService.incidencia_read_mark(data);
+
+            return { response: respuesta, code_api: this._appService.code };
+
+
+
+        } catch (e) { }
+    }
+
+    @Post('incidencia-read-historial-user-admin')
+    @HttpCode(200)
+
+    async incidenciaReadHistorialUserAdmin(@Req() req) {
+        try {
+
+            /**
+             * añade una incidencia
+             * 
+             */
+
+            let data = req.body.peticion.conf;
+            
+            let respuesta = await this._appService.incidencia_read_historial_user_admin(data);
+
+            return { response: respuesta, code_api: this._appService.code };
+
+
+
+        } catch (e) {
+            return { response: [], code_api: this._appService.code };
+         }
+    }
+
+
+
+
+
     @Post('get-log-user-all-table')
     @HttpCode(200)
 
@@ -456,7 +506,7 @@ export class AppController {
 
             let conf = req.body.peticion.conf
 
-            let respuesta = await this._appService.message_delete(conf);
+            let respuesta = await this._appService.message_historial(conf);
 
             return { response: respuesta, code_api: this._appService.code };
 
@@ -477,7 +527,7 @@ export class AppController {
              * 
              */
 
-            let conf = req.body.peticion.conf
+            let conf = req.body.peticion.conf;
 
             let respuesta = await this._appService.message_mark_read(conf);
 
@@ -553,6 +603,38 @@ export class AppController {
 
         } catch (e) { }
     }
+
+
+
+    /**
+     * GESTION DATA USUARIOS
+     */
+
+
+
+    @Post('set-log-user')
+    @HttpCode(200)
+
+    async setLogUser(@Req() req) {
+        try {
+
+            /**
+             * log usuarios app clima y contaminación
+             * 
+             */
+
+            let data = req.body.peticion;
+
+            //console.log({data_set_logUser_app:data});
+            let respuesta = await this._appService.set_log_user(data);
+
+            return { response: respuesta, code_api: this._appService.code };
+
+
+
+        } catch (e) { }
+    }
+    
 
 
 
