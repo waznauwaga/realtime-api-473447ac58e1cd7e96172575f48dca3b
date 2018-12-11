@@ -4,8 +4,8 @@ import { Observable, Subject } from 'rxjs';
 var request = require('ajax-request');
 import * as _ from 'lodash';
 import * as moment from 'moment';
-var conexiondb:any =process.env.conexionrethinkdb;
-var ipstack:any = process.env.ipstack;
+let conexiondb:any =process.env.conexionrethinkdb;
+let ipstack:any = process.env.ipstack;
 @Injectable()
 export class AppService {
 
@@ -284,7 +284,9 @@ export class AppService {
           resolve(false);
         }
       } else {
+        console.log('¡¡¡  CONEXIÓN NULL BASE DE DATOS RETHINKDB !!!');
         resolve(true);
+        
       }
 
 
